@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selic Hoje</title>
+</head>
+<body>
+    <header>
+    </header>
+    <article>
+        <h1><span id="value">(verificando...)</span> %a.a</h1>
+    </article>
+    <footer>fonte: <a target="blank" href=https://www.bcb.gov.br/acessoinformacao/legado?url=https:%2F%2Fwww.bcb.gov.br%2Fhtms%2Fselic%2Fselicdiarios.asp">BCB</a></footer>
+    <script>
+        (async function () {
+            const res = await fetch("/api/selichoje")
+            const valueText = await res.text()
+            document.getElementById("value").innerText = valueText
+        })()
+    </script>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+        }
+        article {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            height: 100vh;
+        }
+        article h1 {
+            font-size: 4rem;
+        }
+
+        a {
+            color: black;
+            text-decoration: none;
+            font-weight: 600;
+        }
+    </style>
+</body>
+</html>
