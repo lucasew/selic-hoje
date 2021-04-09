@@ -17,11 +17,12 @@
         código fonte: <a href="https://github.com/lucasew/selic-hoje" target="blank">GitHub</a>
     </footer>
     <script>
-        (async function () {
-            const res = await fetch("/api/selichoje")
-            const valueText = await res.text()
-            document.getElementById("value").innerText = valueText
-        })()
+        var req = new XMLHttpRequest()
+        req.addEventListener('load', function() {
+            document.getElementById("value").innerText = this.responseText
+        })
+        req.open("GET", "/api/selichoje")
+        req.send()
     </script>
     <style>
         html, body {
