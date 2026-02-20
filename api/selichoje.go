@@ -10,14 +10,8 @@ import (
 	"strings"
 )
 
-// func main() {
-//     data, err := requestData()
-//     if err != nil {
-//         panic(err)
-//     }
-//     println(data)
-// }
-
+// Handler is an HTTP handler that serves the Selic rate as plain text.
+// It sets a Cache-Control header with a max-age of 3600 seconds (1 hour).
 func Handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "text/plain")
 	w.Header().Set("Cache-Control", "max-age=3600")
@@ -31,6 +25,9 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, getOnlySelic(data))
 }
 
+// getOnlySelic parses the CSV data returned by the BCB API.
+// It expects a specific format: 4 lines, 11 semicolon-separated values on the 3rd line.
+// It returns the Selic rate (2nd value) with the comma replaced by a dot.
 func getOnlySelic(in string) string {
 	lines := strings.Split(in, "\n")
 	if len(lines) != 4 {
@@ -43,6 +40,11 @@ func getOnlySelic(in string) string {
 	return strings.ReplaceAll(values[1], ",", ".")
 }
 
+// requestData fetches the Selic rate data from the Brazilian Central Bank (BCB) API.
+//
+// WARNING: The request currently uses a hardcoded date (07/04/2021) in the request body,
+// meaning it will always return data for that specific date, regardless of when it is called.
+// This contradicts the "selic hoje" (Selic Today) implication of the package/endpoint name.
 func requestData() (string, error) {
 	var err error
 	req := new(http.Request)
@@ -75,6 +77,8 @@ func requestData() (string, error) {
 	return string(data), err
 }
 
+// rcwrap is a helper struct that wraps an io.Reader (like bytes.Buffer)
+// to satisfy the io.ReadCloser interface required by http.Request.Body.
 type rcwrap struct {
 	r interface{}
 }
