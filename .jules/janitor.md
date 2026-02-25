@@ -1,0 +1,1 @@
+- 2026-02-25: Replace deprecated 'io/ioutil' with 'io' and remove commented-out code.

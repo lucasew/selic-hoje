@@ -1,0 +1,9 @@
+[tools]
+go = "1.23.1"
+golangci-lint = "1.61.0"
+
+[tasks]
+lint = "golangci-lint run"
+fmt = "gofmt -w ."
+test = "go test ./..."
+build = "go build ./..."
