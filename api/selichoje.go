@@ -22,7 +22,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(200)
-	fmt.Fprint(w, getOnlySelic(data))
+	_, _ = fmt.Fprint(w, getOnlySelic(data))
 }
 
 func getOnlySelic(in string) string {
@@ -54,7 +54,9 @@ func requestData() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
