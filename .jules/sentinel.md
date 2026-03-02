@@ -1,0 +1,1 @@
+- 2024-05-24: [Medium] Information Exposure - look for raw errors being sent directly to clients in HTTP responses (e.g., fmt.Fprintln(w, err)).
