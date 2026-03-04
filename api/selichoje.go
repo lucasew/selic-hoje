@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	error_reporter "github.com/lucasew/bcb-selic-hoje/src/utils/reporter"
+	error_reporter "github.com/lucasew/bcb-selic-hoje/src/reporter"
 )
 
 func Handler(w http.ResponseWriter, r *http.Request) {
