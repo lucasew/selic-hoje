@@ -4,18 +4,26 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
-
-	error_reporter "github.com/lucasew/bcb-selic-hoje/src/reporter"
 )
+
+// ReportError acts as a single centralized error-reporting function.
+// It logs unexpected errors to the console. If a service like Sentry
+// were added later, this is where it would be configured.
+func ReportError(err error) {
+	if err != nil {
+		log.Printf("[ERROR] %v\n", err)
+	}
+}
 
 func Handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "text/plain")
 	w.Header().Set("Cache-Control", "max-age=3600")
 	data, err := requestData()
 	if err != nil {
-		error_reporter.ReportError(err)
+		ReportError(err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
