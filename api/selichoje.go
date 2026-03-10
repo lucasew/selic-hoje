@@ -17,7 +17,10 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(200)
-	fmt.Fprint(w, getOnlySelic(data))
+	_, err = fmt.Fprint(w, getOnlySelic(data))
+	if err != nil {
+		ReportError(err)
+	}
 }
 
 func getOnlySelic(in string) string {
@@ -52,7 +55,11 @@ func requestData() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer res.Body.Close()
+	defer func() {
+		if closeErr := res.Body.Close(); closeErr != nil {
+			ReportError(closeErr)
+		}
+	}()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
