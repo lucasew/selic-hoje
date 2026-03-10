@@ -1,2 +1,11 @@
 [tools]
-golangci-lint = "2.11.3"
+golangci-lint = "1.64.6"
+
+[tasks.ci]
+description = "Run CI checks"
+run = [
+  "go mod tidy",
+  "go fmt ./...",
+  "golangci-lint run",
+  "go test ./..."
+]
