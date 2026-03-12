@@ -1,0 +1,1 @@
+- 2026-03-12: Unbounded response reads (`ioutil.ReadAll`) and missing HTTP client timeouts can lead to memory exhaustion and resource hanging (DoS).

@@ -4,19 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
-
-// func main() {
-//     data, err := requestData()
-//     if err != nil {
-//         panic(err)
-//     }
-//     println(data)
-// }
 
 func Handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "text/plain")
@@ -60,11 +52,14 @@ func requestData() (string, error) {
 	buf := bytes.NewBufferString("filtro=%7B%22dataInicial%22%3A%2207%2F04%2F2021%22%2C%22dataFinal%22%3A%2207%2F04%2F2021%22%7D&parametrosOrdenacao=%5B%5D")
 	req.Body = rcwrap{r: buf}
 	req.Method = "POST"
-	res, err := http.DefaultClient.Do(req)
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	res, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
-	data, err := ioutil.ReadAll(res.Body)
+	data, err := io.ReadAll(io.LimitReader(res.Body, 1024*1024))
 	if err != nil {
 		return "", err
 	}

@@ -14,13 +14,4 @@ Data;Taxa (% a.a.);Fator diário;Financeiro (R$);Operações;Média;Mediana;Moda
     if (out != expectedOut) {
         t.Errorf("expected '%s' got '%s'", expectedOut, out)
     }
-    // Personal debugging
-    // data, err := requestData()
-    // if err != nil {
-    //     t.Error(err)
-    // }
-    // println("DATA:")
-    // println(data)
-    // println("PARSED:")
-    // println(getOnlySelic(data))
 }

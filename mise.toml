@@ -1,0 +1,6 @@
+[tools]
+go = "1.22.0"
+golangci-lint = "1.56.2"
+
+[tasks]
+test = "go test ./..."
