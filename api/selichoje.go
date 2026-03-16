@@ -10,14 +10,9 @@ import (
 	"strings"
 )
 
-// func main() {
-//     data, err := requestData()
-//     if err != nil {
-//         panic(err)
-//     }
-//     println(data)
-// }
-
+// Handler is the Vercel serverless entrypoint for fetching the Selic rate.
+// It proxies the BCB API request, sets a 1-hour cache, and returns the rate as plain text.
+// Any upstream errors are returned as a 500 internal server error.
 func Handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "text/plain")
 	w.Header().Set("Cache-Control", "max-age=3600")
@@ -31,6 +26,10 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, getOnlySelic(data))
 }
 
+// getOnlySelic parses the BCB API CSV response to extract the Selic rate value.
+// It expects a precise 4-line format and extracts the 2nd column of the 3rd line.
+// The extracted rate has its comma converted to a dot for standard decimal formatting.
+// Returns an empty string if the input does not match the expected CSV shape.
 func getOnlySelic(in string) string {
 	lines := strings.Split(in, "\n")
 	if len(lines) != 4 {
@@ -43,6 +42,12 @@ func getOnlySelic(in string) string {
 	return strings.ReplaceAll(values[1], ",", ".")
 }
 
+// requestData queries the BCB API for the Selic rate.
+// It simulates a real browser request to bypass basic scraper protections.
+//
+// Limitations:
+// - It currently uses a hardcoded date (07/04/2021) due to a logic flaw.
+// - HTTP Client does not define a Timeout.
 func requestData() (string, error) {
 	var err error
 	req := new(http.Request)
@@ -75,6 +80,9 @@ func requestData() (string, error) {
 	return string(data), err
 }
 
+// rcwrap is a thin wrapper that adapts an io.Reader into an io.ReadCloser
+// with a no-op Close method. This is used to satisfy the http.Request Body
+// requirement for POST requests constructed from a simple string buffer.
 type rcwrap struct {
 	r interface{}
 }
