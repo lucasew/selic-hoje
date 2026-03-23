@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -18,7 +19,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=3600")
 	data, err := requestData()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.WriteHeader(500)
+		fmt.Fprintln(w, err)
 		return
 	}
 	w.WriteHeader(200)
@@ -69,7 +71,7 @@ func requestData() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	data, err := io.ReadAll(res.Body)
+	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return "", err
 	}

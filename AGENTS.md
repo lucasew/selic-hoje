@@ -4,7 +4,7 @@
 - `index.html` -> Frontend entrypoint (Vanilla JS, single page).
 - `api/selichoje.go` -> Backend API handler (Go serverless function for Vercel).
 - `api/selichoje_test.go` -> Unit tests for the API handler.
-- `shell.nix` / `mise.toml` -> Development environment definitions.
+- `shell.nix` -> Development environment dependencies.
 
 ## Directives
 - Go 1.22+ is used. Avoid deprecated packages like `io/ioutil`.
@@ -15,3 +15,4 @@
 - Do not extract helper functions into external directories like `src/`. Merge them directly within the API handler files to prevent Vercel module resolution failures.
 - No ghost comments (commented-out code).
 - Documentation should focus on explaining the 'why', non-obvious nuances, flow, side effects, and edge cases. Avoid obvious or redundant comments. Use standard `//` docstrings for both exported and internal functions.
+- The `.gitignore` file must explicitly exclude `.vercel`, `mise`, and `mise.local.toml`.
