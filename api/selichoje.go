@@ -10,14 +10,10 @@ import (
 	"strings"
 )
 
-// func main() {
-//     data, err := requestData()
-//     if err != nil {
-//         panic(err)
-//     }
-//     println(data)
-// }
-
+// Handler fetches the latest Selic rate from the BCB API and serves it as plain text.
+// It is designed as a serverless entrypoint for Vercel. Errors from the BCB API
+// result in a 500 response containing the error string. Responses are aggressively
+// cached (1 hour) to avoid rate limits and minimize latency.
 func Handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "text/plain")
 	w.Header().Set("Cache-Control", "max-age=3600")
@@ -31,6 +27,11 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, getOnlySelic(data))
 }
 
+// getOnlySelic parses the CSV response from the BCB API to extract the daily Selic rate.
+// The CSV is expected to be structurally rigid: 4 lines total, with the data on the 3rd line.
+// It isolates the rate column (index 1) and standardizes the decimal separator to a period.
+// Edge case: If the input format drifts (e.g., more/fewer lines or columns), it silently returns
+// an empty string.
 func getOnlySelic(in string) string {
 	lines := strings.Split(in, "\n")
 	if len(lines) != 4 {
@@ -43,6 +44,12 @@ func getOnlySelic(in string) string {
 	return strings.ReplaceAll(values[1], ",", ".")
 }
 
+// requestData constructs and executes a POST request to the BCB API to export the Selic rate CSV.
+// Nuance: The API uses a POST endpoint that typically expects form data, requiring specific
+// headers like 'Content-Type' and a browser-like 'User-Agent' to avoid being blocked.
+// Limitation: Currently sends a hardcoded date filter (07/04/2021) within the request body.
+// Performance Implication: Uses http.DefaultClient without an explicit timeout, which could
+// lead to resource exhaustion if the BCB API hangs.
 func requestData() (string, error) {
 	var err error
 	req := new(http.Request)
@@ -75,14 +82,20 @@ func requestData() (string, error) {
 	return string(data), err
 }
 
+// rcwrap wraps an io.Reader to implement the io.ReadCloser interface.
+// This is necessary because http.Request.Body requires an io.ReadCloser,
+// but bytes.NewBufferString only provides an io.Reader.
 type rcwrap struct {
 	r interface{}
 }
 
+// Read delegates the Read call to the underlying io.Reader.
 func (r rcwrap) Read(b []byte) (int, error) {
 	return r.r.(io.Reader).Read(b)
 }
 
+// Close implements the Closer interface with a no-op, satisfying io.ReadCloser
+// without requiring the underlying reader to actually be closeable.
 func (rcwrap) Close() error {
 	return nil
 }
