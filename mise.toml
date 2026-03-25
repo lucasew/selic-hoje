@@ -1,0 +1,30 @@
+[tools]
+"ubi:lucasew/workspaced" = "0.2.3"
+go = "1.22.1"
+
+[tasks.lint]
+run = "workspaced codebase lint"
+
+[tasks.fmt]
+run = "workspaced codebase format"
+
+[tasks.test]
+depends = ["test:*"]
+
+[tasks.codegen]
+depends = ["codegen:*"]
+
+[tasks.install]
+depends = ["install:*"]
+
+[tasks.ci]
+depends = ["lint", "test"]
+
+[tasks."install:go"]
+run = "go mod download"
+
+[tasks."test:go"]
+run = "go test ./..."
+
+[tasks."codegen:dummy"]
+run = "echo 'dummy codegen to avoid errors'"

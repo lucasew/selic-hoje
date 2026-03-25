@@ -1,0 +1,46 @@
+name: "autorelease"
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install mise
+        uses: jdx/mise-action@v2
+      - name: Install dependencies
+        run: mise run install
+      - name: Run Codegen
+        run: mise run codegen
+      - name: Check for changes and create PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          title: "chore: update codegen"
+          commit-message: "chore: update codegen"
+          branch: "chore/update-codegen"
+          body: "Automated codegen update"
+      - name: CI
+        run: mise run ci
+      - name: Release
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v$(date +'%Y.%m.%d-%H%M%S')" --generate-notes
+      - name: Upload Artifacts
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: .
