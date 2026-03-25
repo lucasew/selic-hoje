@@ -30,6 +30,7 @@ jobs:
           commit-message: "chore: update codegen"
           branch: "chore/update-codegen"
           body: "Automated codegen update"
+          base: ${{ github.head_ref || github.ref_name }}
       - name: CI
         run: mise run ci
       - name: Release
