@@ -1,0 +1,1 @@
+- 2026-03-30: Remove ghost comments and replace deprecated ioutil.ReadAll with io.ReadAll.
