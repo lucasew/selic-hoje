@@ -4,30 +4,25 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 )
 
-// func main() {
-//     data, err := requestData()
-//     if err != nil {
-//         panic(err)
-//     }
-//     println(data)
-// }
+func ReportError(err error) {
+	fmt.Println("Error:", err)
+}
 
 func Handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "text/plain")
 	w.Header().Set("Cache-Control", "max-age=3600")
 	data, err := requestData()
 	if err != nil {
-		w.WriteHeader(500)
-		fmt.Fprintln(w, err)
+		ReportError(err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 	fmt.Fprint(w, getOnlySelic(data))
 }
 
@@ -64,7 +59,7 @@ func requestData() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	data, err := ioutil.ReadAll(res.Body)
+	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return "", err
 	}
