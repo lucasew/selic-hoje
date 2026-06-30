@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -23,8 +24,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "max-age=3600")
 	data, err := requestData()
 	if err != nil {
-		w.WriteHeader(500)
-		fmt.Fprintln(w, err)
+		ReportError(err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(200)
@@ -85,4 +86,8 @@ func (r rcwrap) Read(b []byte) (int, error) {
 
 func (rcwrap) Close() error {
 	return nil
+}
+
+func ReportError(err error) {
+	log.Println(err)
 }
