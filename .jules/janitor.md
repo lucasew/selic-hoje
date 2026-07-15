@@ -1,1 +1,0 @@
-- 2025-05-18: Centralized error reporting prevents leaking raw errors and ensures consistency.
