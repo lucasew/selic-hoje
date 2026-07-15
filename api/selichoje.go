@@ -5,7 +5,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
+	"time"
 )
 
 // func main() {
@@ -29,22 +31,45 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, getOnlySelic(data))
 }
 
+// getOnlySelic returns the most recent non-zero daily Selic rate (% a.a.)
+// from a BCB novoselic CSV export. Rows are newest-first; stub/zero days are skipped.
 func getOnlySelic(in string) string {
-	lines := strings.Split(in, "\n")
-	if len(lines) != 4 {
-		return ""
+	in = strings.TrimPrefix(in, "\ufeff")
+	for _, line := range strings.Split(in, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "Taxa Selic") || strings.HasPrefix(line, "Data;") {
+			continue
+		}
+		values := strings.Split(line, ";")
+		if len(values) < 2 {
+			continue
+		}
+		rate := strings.TrimSpace(values[1])
+		if rate == "" || rate == "0" {
+			continue
+		}
+		return strings.ReplaceAll(rate, ",", ".")
 	}
-	values := strings.Split(lines[2], ";")
-	if len(values) != 11 {
-		return ""
-	}
-	return strings.ReplaceAll(values[1], ",", ".")
+	return ""
+}
+
+// exportForm builds the BCB export body for a window ending at now (last lookbackDays days).
+func exportForm(now time.Time, lookbackDays int) string {
+	end := now
+	start := now.AddDate(0, 0, -lookbackDays)
+	filtro := fmt.Sprintf(`{"dataInicial":"%s","dataFinal":"%s"}`,
+		start.Format("02/01/2006"),
+		end.Format("02/01/2006"))
+	v := url.Values{}
+	v.Set("filtro", filtro)
+	v.Set("parametrosOrdenacao", "[]")
+	return v.Encode()
 }
 
 func requestData() (string, error) {
 	const endpoint = "https://www3.bcb.gov.br/novoselic/rest/taxaSelicApurada/pub/exportarCsv"
-	// form body matches the BCB novoselic export UI (fixed sample window; keep as-is).
-	const form = "filtro=%7B%22dataInicial%22%3A%2207%2F04%2F2021%22%2C%22dataFinal%22%3A%2207%2F04%2F2021%22%7D&parametrosOrdenacao=%5B%5D"
+	// 14-day window covers weekends/holidays so the latest published day is included.
+	form := exportForm(time.Now(), 14)
 	req, err := http.NewRequest(http.MethodPost, endpoint, strings.NewReader(form))
 	if err != nil {
 		return "", err
