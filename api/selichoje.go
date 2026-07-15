@@ -1,13 +1,10 @@
 package handler
 
 import (
-	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"strings"
 )
 
@@ -45,47 +42,32 @@ func getOnlySelic(in string) string {
 }
 
 func requestData() (string, error) {
-	var err error
-	req := new(http.Request)
-	req.URL, err = url.Parse("https://www3.bcb.gov.br/novoselic/rest/taxaSelicApurada/pub/exportarCsv")
+	const endpoint = "https://www3.bcb.gov.br/novoselic/rest/taxaSelicApurada/pub/exportarCsv"
+	// form body matches the BCB novoselic export UI (fixed sample window; keep as-is).
+	const form = "filtro=%7B%22dataInicial%22%3A%2207%2F04%2F2021%22%2C%22dataFinal%22%3A%2207%2F04%2F2021%22%7D&parametrosOrdenacao=%5B%5D"
+	req, err := http.NewRequest(http.MethodPost, endpoint, strings.NewReader(form))
 	if err != nil {
 		return "", err
 	}
-	req.Header = http.Header{}
-	req.Header.Add("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:86.0) Gecko/20100101 Firefox/86.0")
-	req.Header.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
-	req.Header.Add("Accept-Language", "pt-BR,en-US;q=0.7,en;q=0.3")
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("Upgrade-Insecure-Requests", "1")
-	req.Header.Add("Referer", "https://www3.bcb.gov.br/novoselic/pesquisa-taxa-apurada.jsp")
-	buf := bytes.NewBufferString("filtro=%7B%22dataInicial%22%3A%2207%2F04%2F2021%22%2C%22dataFinal%22%3A%2207%2F04%2F2021%22%7D&parametrosOrdenacao=%5B%5D")
-	req.Body = rcwrap{r: buf}
-	req.Method = "POST"
+	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:86.0) Gecko/20100101 Firefox/86.0")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "pt-BR,en-US;q=0.7,en;q=0.3")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Upgrade-Insecure-Requests", "1")
+	req.Header.Set("Referer", "https://www3.bcb.gov.br/novoselic/pesquisa-taxa-apurada.jsp")
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
 	}
-	data, err := ioutil.ReadAll(res.Body)
+	defer res.Body.Close()
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		return "", fmt.Errorf("bcb selic export: unexpected status %s", res.Status)
+	}
+	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return "", err
 	}
-	err = res.Body.Close()
-	if err != nil {
-		return "", err
-	}
-	return string(data), err
-}
-
-type rcwrap struct {
-	r interface{}
-}
-
-func (r rcwrap) Read(b []byte) (int, error) {
-	return r.r.(io.Reader).Read(b)
-}
-
-func (rcwrap) Close() error {
-	return nil
+	return string(data), nil
 }
 
 func ReportError(err error) {
