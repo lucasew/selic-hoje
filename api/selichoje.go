@@ -1,91 +1,71 @@
 package handler
 
 import (
-	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
-	"strings"
+	"time"
 )
 
-// func main() {
-//     data, err := requestData()
-//     if err != nil {
-//         panic(err)
-//     }
-//     println(data)
-// }
+// metaSelicURL is BCB SGS series 432 (Meta Selic, % a.a.) — the Copom target
+// rate commonly quoted as "a Selic". Open Data JSON API, no scrape.
+const metaSelicURL = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json"
+
+// httpClient bounds upstream latency so a hung BCB does not pin the function.
+var httpClient = &http.Client{Timeout: 15 * time.Second}
 
 func Handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "text/plain")
 	w.Header().Set("Cache-Control", "max-age=3600")
-	data, err := requestData()
+	rate, err := fetchMetaSelic()
 	if err != nil {
 		ReportError(err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(200)
-	fmt.Fprint(w, getOnlySelic(data))
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, rate)
 }
 
-func getOnlySelic(in string) string {
-	lines := strings.Split(in, "\n")
-	if len(lines) != 4 {
-		return ""
-	}
-	values := strings.Split(lines[2], ";")
-	if len(values) != 11 {
-		return ""
-	}
-	return strings.ReplaceAll(values[1], ",", ".")
+type sgsPoint struct {
+	Data  string `json:"data"`
+	Valor string `json:"valor"`
 }
 
-func requestData() (string, error) {
-	var err error
-	req := new(http.Request)
-	req.URL, err = url.Parse("https://www3.bcb.gov.br/novoselic/rest/taxaSelicApurada/pub/exportarCsv")
+func fetchMetaSelic() (string, error) {
+	req, err := http.NewRequest(http.MethodGet, metaSelicURL, nil)
 	if err != nil {
 		return "", err
 	}
-	req.Header = http.Header{}
-	req.Header.Add("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:86.0) Gecko/20100101 Firefox/86.0")
-	req.Header.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
-	req.Header.Add("Accept-Language", "pt-BR,en-US;q=0.7,en;q=0.3")
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("Upgrade-Insecure-Requests", "1")
-	req.Header.Add("Referer", "https://www3.bcb.gov.br/novoselic/pesquisa-taxa-apurada.jsp")
-	buf := bytes.NewBufferString("filtro=%7B%22dataInicial%22%3A%2207%2F04%2F2021%22%2C%22dataFinal%22%3A%2207%2F04%2F2021%22%7D&parametrosOrdenacao=%5B%5D")
-	req.Body = rcwrap{r: buf}
-	req.Method = "POST"
-	res, err := http.DefaultClient.Do(req)
+	req.Header.Set("Accept", "application/json")
+	res, err := httpClient.Do(req)
 	if err != nil {
 		return "", err
 	}
-	data, err := ioutil.ReadAll(res.Body)
+	defer res.Body.Close()
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		return "", fmt.Errorf("bcb sgs 432: unexpected status %s", res.Status)
+	}
+	// Cap body size: series response is tiny; bound memory anyway.
+	body, err := io.ReadAll(io.LimitReader(res.Body, 1<<20))
 	if err != nil {
 		return "", err
 	}
-	err = res.Body.Close()
-	if err != nil {
-		return "", err
+	return parseMetaSelic(body)
+}
+
+// parseMetaSelic extracts the latest Meta Selic value from an SGS JSON array.
+func parseMetaSelic(body []byte) (string, error) {
+	var points []sgsPoint
+	if err := json.Unmarshal(body, &points); err != nil {
+		return "", fmt.Errorf("bcb sgs 432: decode: %w", err)
 	}
-	return string(data), err
-}
-
-type rcwrap struct {
-	r interface{}
-}
-
-func (r rcwrap) Read(b []byte) (int, error) {
-	return r.r.(io.Reader).Read(b)
-}
-
-func (rcwrap) Close() error {
-	return nil
+	if len(points) == 0 || points[0].Valor == "" {
+		return "", fmt.Errorf("bcb sgs 432: empty series")
+	}
+	return points[0].Valor, nil
 }
 
 func ReportError(err error) {
